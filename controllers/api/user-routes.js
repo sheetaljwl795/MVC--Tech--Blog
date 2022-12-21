@@ -1,5 +1,8 @@
 const router = require('express').Router();
 const { User, Post, Comment } = require('../../models');
+const session = require('express-session');
+const withAuth = require('../../utils/auth');
+const SequelizeStore = require('connect-session-sequelize')(session.Store);
 router.get('/', (req, res) => {
     User.findAll({
             attributes: { exclude: ['[password'] }
@@ -54,6 +57,7 @@ router.post('/', (req, res) => {
 
     User.create({
         username: req.body.username,
+        email: req.body.email,
         password: req.body.password
     })
 
@@ -74,12 +78,16 @@ router.post('/', (req, res) => {
 
 router.post('/login', (req, res) => {
     User.findOne({
-            where: {
-                username: req.body.username
-            }
+        where: {
+        email: req.body.email
+        }
+    // User.findOne({
+    //         where: {
+    //             username: req.body.username
+    //         }
         }).then(userData => {
             if (!userData) {
-                res.status(400).json({ message: 'No user with that username!' });
+                res.status(400).json({ message: 'No user with that email!' });
                 return;
             }
             const validPassword = userData.checkPassword(req.body.password);
@@ -113,7 +121,7 @@ router.post('/logout', (req, res) => {
     }
 });
 
-router.put('/:id', (req, res) => {
+router.put('/:id',withAuth, (req, res) => {
 
     User.update(req.body, {
             individualHooks: true,
@@ -135,7 +143,7 @@ router.put('/:id', (req, res) => {
 
 });
 
-router.delete('/:id', (req, res) => {
+router.delete('/:id',withAuth, (req, res) => {
     User.destroy({
             where: {
                 id: req.params.id
